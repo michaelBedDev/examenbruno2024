@@ -1,0 +1,75 @@
+services:
+    apache:
+        build: apache
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./joomla:/app
+            - ./certs:/certs
+            - ./vhosts/usuario.lan.conf:/etc/apache2/sites-enabled/usuario.lan.conf
+            - ./php/php.ini:/etc/php/8.2/apache2/php.ini
+
+        networks:
+            redeexamen:
+                aliases:
+                    - usuario.lan
+                    - www.usuario.lan
+
+    nginx:
+        image: nginx:latest
+        ports:
+            - "8000:80"
+            - "8443:443"
+        volumes:
+            - ./joomla:/app
+            - ./certs:/certs
+            - ./vhosts/usuarionginx.conf:/etc/nginx/conf.d/usuarionginx.conf
+        networks:
+            redeexamen:
+                aliases:
+                    - usuario.lan
+                    - www.usuario.lan
+    phpserver:
+        build: php
+        volumes:
+            - ./joomla:/app
+            - ./php/www.conf:/etc/php/8.2/fpm/pool.d/www.conf
+            - ./php/php.ini:/etc/php/8.2/fpm/php.ini
+        networks:
+            redeexamen:
+
+    phpmyadmin:
+        image: phpmyadmin:latest
+        ports:
+            - "8080:80"
+        environment:
+            - PMA_HOST=basededatos
+        networks:
+            redeexamen:
+    basededatos:
+        image: mariadb:latest
+        command:
+            - "--default-authentication-plugin=mysql_native_password"
+        env_file: .env
+        volumes:
+            - ./basedatos/backup:/docker-entrypoint-initdb.d
+            - ./basedatos/backup:/backup
+            - datos:/var/lib/mysql
+        networks:
+            redeexamen:
+
+    cliente:
+        hostname: cliente
+        image: brunosct/debian12-cliente-firefox
+        networks:
+            - redeexamen
+        environment:
+            - DISPLAY=${DISPLAY}
+        volumes:
+            - /tmp/.X11-unix:/tmp/.X11-unix
+
+volumes:
+    datos:
+networks:
+    redeexamen:
